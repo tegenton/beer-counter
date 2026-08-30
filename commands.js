@@ -1,49 +1,62 @@
 import 'dotenv/config';
-import { getRPSChoices } from './game.js';
-import { capitalize, InstallGlobalCommands } from './utils.js';
+import { InstallGlobalCommands } from './utils.js';
 
-// Get the game choices from game.js
-function createCommandChoices() {
-  const choices = getRPSChoices();
-  const commandChoices = [];
-
-  for (let choice of choices) {
-    commandChoices.push({
-      name: capitalize(choice),
-      value: choice.toLowerCase(),
-    });
-  }
-
-  return commandChoices;
+const amount = {
+  type: 4,
+  name: 'amount',
+  description: 'How many?',
+  required: false,
 }
 
-// Simple test command
-const TEST_COMMAND = {
-  name: 'test',
-  description: 'Basic command',
-  type: 1,
-  integration_types: [0, 1],
-  contexts: [0, 1, 2],
-};
-
-// Command containing options
-const CHALLENGE_COMMAND = {
-  name: 'challenge',
-  description: 'Challenge to a match of rock paper scissors',
+const DRINK_COMMAND = {
+  name: 'drink',
+  description: 'Drink something',
   options: [
     {
       type: 3,
-      name: 'object',
-      description: 'Pick your object',
-      required: true,
-      choices: createCommandChoices(),
+      name: 'beverage',
+      description: 'Pick your beverage',
+      required: false,
+      choices: [
+        {name: 'Beer', value: 'beer'},
+        {name: 'Milk', value: 'milk'},
+        {name: 'Lemonade', value: 'lemonade'},
+      ],
+    },
+    amount,
+  ],
+  type: 1,
+  integration_types: [0, 1],
+  contexts: [0, 2],
+}
+
+const BEER_COMMAND = {
+  name: 'beer',
+  description: 'Drink a BEER!',
+  options: [
+    amount,
+  ],
+  type: 1,
+  integration_types: [0, 1],
+  contexts: [0, 2],
+}
+
+const TALLY_COMMAND = {
+  name: 'tally',
+  description: 'Tally up drinks',
+  options: [
+    {
+      type: 6,
+      name: 'user',
+      description: 'Check someone in particular',
+      required: false,
     },
   ],
   type: 1,
   integration_types: [0, 1],
   contexts: [0, 2],
-};
+}
 
-const ALL_COMMANDS = [TEST_COMMAND, CHALLENGE_COMMAND];
+const ALL_COMMANDS = [DRINK_COMMAND, BEER_COMMAND, TALLY_COMMAND];
 
 InstallGlobalCommands(process.env.APP_ID, ALL_COMMANDS);

@@ -8,15 +8,68 @@ import {
   MessageComponentTypes,
   verifyKeyMiddleware,
 } from 'discord-interactions';
-import { getRandomEmoji, DiscordRequest } from './utils.js';
-import { getShuffledOptions, getResult } from './game.js';
+import { DiscordRequest } from './utils.js';
 
 // Create an express app
 const app = express();
 // Get port, or default to 3000
 const PORT = process.env.PORT || 3000;
-// To keep track of our active games
-const activeGames = {};
+
+const drinks = {};
+
+function drink(user, beverage) {
+  if (!user in drinks) {
+    drinks[user] = {"beer": 0, "lemonade": 0, "milk": 0};
+  }
+  drinks[user][beverage]++;
+  return res.send({
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: {
+      flags: InteractionResponseFlags.IS_COMPONENTS_V2,
+      components: [
+	{
+	  type: MessageComponentTypes.TEXT_DISPLAY,
+	  content: `<@${user}> had a ${beverage}`
+	}
+      ]
+    },
+  });
+}
+
+function tally(tallee) {
+  let message;
+  if (tallee === 'all') {
+    let total = {"beer": 0, "lemonade": 0, "milk": 0};
+    for (let user in drinks) {
+      total["beer"] += drinks[user]["beer"];
+      total["milk"] += drinks[user]["milk"];
+      total["lemonade"] += drinks[user]["lemonade"];
+    }
+    message = 'In total, everyone has had:\n'
+    for (let bev in total) {
+      message += `${bev}: ${total[bev]}\n`;
+    }
+  } else if (tallee in drinks) {
+    message = `<@${tallee}> has had:\n`;
+    for (let bev in drinks[tallee]) {
+      message += `${bev}: ${drinks[tallee][bev]}\n`;
+    }
+  } else {
+    message = `<@${tallee}> must be thirsty, they have had nothing to drink!`;
+  }
+  return res.send({
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: {
+      flags: InteractionResponseFlags.IS_COMPONENTS_V2,
+      components: [
+	{
+	  type: MessageComponentTypes.TEXT_DISPLAY,
+	  content: message
+	}
+      ]
+    },
+  });
+}
 
 /**
  * Interactions endpoint URL where Discord will send HTTP requests
@@ -39,23 +92,28 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
    */
   if (type === InteractionType.APPLICATION_COMMAND) {
     const { name } = data;
+    const context = req.body.context;
+    const user = context === 0 ? req.body.member.user.id : req.body.user.id;
+    let beverage = 'beer';
+    let amount = 1;
 
-    // "test" command
-    if (name === 'test') {
-      // Send a message into the channel where command was triggered from
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          flags: InteractionResponseFlags.IS_COMPONENTS_V2,
-          components: [
-            {
-              type: MessageComponentTypes.TEXT_DISPLAY,
-              // Fetches a random emoji to send from a helper function
-              content: `hello world ${getRandomEmoji()}`
-            }
-          ]
-        },
-      });
+    if (name === 'drink' || name === 'beer') {
+      for (let option of req.body.data.options) {
+	if (option.name === 'beverage') {
+	  beverage = option.value;
+	} else if (option.name === 'amount') {
+	  amount = option.value;
+	}
+      }
+      return drink(user, beverage);
+    } else if (name === 'tally') {
+      let tallee = 'all';
+      for (let option of req.body.data.options) {
+	if (option.name === 'user') {
+	  tallee = option.value;
+	}
+      }
+      return tally(tallee);
     }
 
     console.error(`unknown command: ${name}`);
