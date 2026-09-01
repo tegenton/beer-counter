@@ -9,6 +9,7 @@ import {
   verifyKeyMiddleware,
 } from 'discord-interactions';
 import { DiscordRequest } from './utils.js';
+import { readFile, writeFile } from 'fs';
 
 // Create an express app
 const app = express();
@@ -16,12 +17,22 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const drinks = {};
+readFile('drinks.json', 'utf8', (err, data) => {
+  if (data) {
+    drinks = JSON.parse(data);
+  }
+});
 
 function drink(user, beverage) {
   if (!user in drinks) {
     drinks[user] = {"beer": 0, "lemonade": 0, "milk": 0};
   }
   drinks[user][beverage]++;
+  writeFile('drinks.json', JSON.stringify(drinks), (err) => {
+    if (err) {
+      console.log(err);
+    }
+  });
   return res.send({
     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
     data: {
